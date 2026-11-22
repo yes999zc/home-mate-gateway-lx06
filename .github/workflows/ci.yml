@@ -1,0 +1,85 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+# One run per ref: a new push cancels the previous run instead of queueing
+# behind it. Keep this in step with the core repo's workflow.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  linux:
+    runs-on: self-hosted
+    timeout-minutes: 30
+    env:
+      CARGO_PROFILE_DEV_DEBUG: '0'
+      CARGO_PROFILE_TEST_DEBUG: '0'
+      CARGO_INCREMENTAL: '0'
+    steps:
+      - uses: actions/checkout@v4
+      # Pinned to the released v1 tag, not @master: the toolchain this action
+      # installs is part of the build result, so it must not move on its own.
+      # v1 needs the toolchain spelled out; keep it equal to rust-toolchain.toml.
+      - uses: dtolnay/rust-toolchain@v1
+        with:
+          toolchain: 1.100.0
+          components: clippy, rustfmt
+      - name: fmt
+        # Formatting is a gate, not a suggestion: the workspace was formatted
+        # for the first time in the `style: cargo fmt --all` commit, and this
+        # step is what keeps it there. Checked before the host packages and
+        # the test run so a misformatted push fails in seconds.
+        run: cargo fmt --all --check
+      - name: line-count ratchet gate (#26, #43)
+        run: python3 tools/line_gate.py
+      - name: OTA size-gate self-test (#9, #43)
+        run: python3 tools/size_gate.py --self-test
+      - name: LX06 cold boot and warm wake-mode cache reuse
+        run: python3 tools/test_lx06_supervisor.py
+      - name: A/B slot decision drill
+        run: bash tools/slot_decision_test.sh
+      - name: host packages for vendored C (speexdsp, aws-lc)
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y cmake pkg-config
+      - name: test
+        # The four audio-period contracts used to be skipped here: they drive
+        # the parked writer with real sleeps and their counts drifted with the
+        # host's thread scheduler, so a Linux host measured its own timing,
+        # not the product's. They now pace the fake DAC one period per
+        # completed write (see the `write_one_period` note in
+        # crates/gateway/tests/firmware_contract.rs), so every count they
+        # assert is audio the fake hardware actually took — the same numbers
+        # on macOS and on this runner.
+        run: >-
+          cargo test --workspace --all-targets --locked -- --test-threads=1
+      - name: Actual Firmware synthetic voice fixture
+        timeout-minutes: 2
+        run: |
+          rm -rf "$RUNNER_TEMP/luna-voice-fixture"
+          cargo build -p home-mate-device-gateway --example northbound_fixture --locked
+          python3 tools/test_voice_fixture.py --fixture target/debug/examples/northbound_fixture --output-dir "$RUNNER_TEMP/luna-voice-fixture"
+      - name: clippy
+        run: cargo clippy --workspace --all-targets --locked -- -D warnings
+      - name: Northbound production-source negative controls
+        timeout-minutes: 12
+        run: |
+          rm -rf "$RUNNER_TEMP/luna-northbound-mutants"
+          python3 tools/luna_northbound_mutants.py --out "$RUNNER_TEMP/luna-northbound-mutants"
+      - name: Preserve northbound negative-control evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: northbound-negative-controls
+          if-no-files-found: ignore
+          path: |
+            ${{ runner.temp }}/luna-northbound-mutants/report.json
+            ${{ runner.temp }}/luna-northbound-mutants/source-manifest.json
+            ${{ runner.temp }}/luna-northbound-mutants/*.log
+            ${{ runner.temp }}/luna-northbound-mutants/*.patch
+            ${{ runner.temp }}/luna-voice-fixture/**/result.json
+            ${{ runner.temp }}/luna-voice-fixture/**/gateway.log
+            ${{ runner.temp }}/luna-voice-fixture/**/observed.json

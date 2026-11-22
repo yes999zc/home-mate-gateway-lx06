@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 590 152" role="img" aria-labelledby="title">
+  <title id="title">Home Mate · 小瑞</title>
+  <g transform="translate(18 18) scale(1.22)"><path fill="#2E7D4F" fill-rule="evenodd" d="
+    M 16 44 Q 16 37.5 21.4 33.4 L 44.8 15.6
+    Q 49.4 12.1 54.5 15.6 L 77.6 31.7 Q 83 35.4 83 41.5
+    V 57.8 Q 83 72.5 68.5 72.5 H 49.5 Q 46 72.5 43.3 74.3
+    L 29.8 83.3 Q 26.5 85.4 26.5 81.4 V 72
+    Q 16 68.6 16 57.5 Z
+    M 33 53.2 V 47.1 A 4.9 4.9 0 0 1 42.8 47.1 V 53.2
+    A 4.9 4.9 0 0 1 33 53.2 Z
+    M 55.5 49.6 V 43.5 A 4.9 4.9 0 0 1 65.3 43.5 V 49.6
+    A 4.9 4.9 0 0 1 55.5 49.6 Z"/></g>
+  <g fill="none" stroke="#111111" stroke-width="7.9" stroke-linecap="round" stroke-linejoin="round" transform="translate(151 51)">
+    <path transform="translate(0 0)" d="M0 0V48 M38 0V48 M0 24H38"/>
+    <path transform="translate(54 0)" d="M16 14 C25.6 14 32.5 21.4 32.5 31.2 C32.5 41 25.6 48.4 16 48.4 C6.4 48.4 -.5 41 -.5 31.2 C-.5 21.4 6.4 14 16 14Z"/>
+    <path transform="translate(101 0)" d="M0 48V15 M0 27 C0 19.4 5.7 14 12.8 14 C20.9 14 25.3 19.8 25.3 28V48 M25.3 27 C25.3 19.4 30.7 14 38.1 14 C46.4 14 50.7 20.2 50.7 28.5V48"/>
+    <path transform="translate(165 0)" d="M31 42 C27.6 46.3 22.6 48.5 16.9 48.5 C6.5 48.5 0 41 0 31.5 C0 21.4 6.8 14 16.4 14 C26.4 14 32.3 21.7 32.3 30.4 H1.8"/>
+    <path transform="translate(228 0)" d="M0 48V0 L21.6 29.2 43.2 0V48"/>
+    <path transform="translate(287 0)" d="M32 31.2 C32 21.1 25.5 14 16.1 14 C6.3 14 0 21.4 0 31.2 C0 41.2 6.3 48.4 16.1 48.4 C25.5 48.4 32 41.3 32 31.2Z M32 15V48"/>
+    <path transform="translate(333 0)" d="M8.2 4.5V36.5 C8.2 44.7 12 48.2 18.2 48.2 Q21.8 48.2 24.2 46.8 M.8 16H22"/>
+    <path transform="translate(367 0)" d="M31 42 C27.6 46.3 22.6 48.5 16.9 48.5 C6.5 48.5 0 41 0 31.5 C0 21.4 6.8 14 16.4 14 C26.4 14 32.3 21.7 32.3 30.4 H1.8"/>
+  </g>
+</svg>

@@ -1,0 +1,50 @@
+[   1825] stage=mounts done devtmpfs_rc=-1 tty=0
+[   1825] orbit head at 9
+[   1825] stage 1 reached
+[   1832] stage=mount_system part=13 rc=0 errno=0 nested=0 sh=0
+[   1832] stage 2 reached
+[   1862] stage=fsck_data status=0
+[   1862] stage 3 reached
+[   1867] stage=mount_data rc=0 errno=0
+[   1867] stage 4 reached
+[   1873] stage=vendor link=1
+[   1874] stage=etc farm=1
+[   1874] stage 5 reached
+[   1878] hostname=em-G090L91072732EXG rc=0
+[   1878] stage=boot try=1
+[   1888] stage=last_kmsg bytes=64622
+[   1888] stage 6 reached
+[   2393] stage=applets status=0 vi=0
+[   2393] stage 7 reached
+[   2393] mt_usb cmode=1 rc=0
+[   2395] usb enable=0 rc=0 errno=0
+[   2395] usb idVendor=1949 rc=0 errno=0
+[   2396] usb idProduct=2007 rc=0 errno=0
+[   2396] usb iManufacturer=EchoMuse rc=0 errno=0
+[   2396] usb iProduct=emOS console rc=0 errno=0
+[   2396] usb iSerial=G090L91072732EXG rc=0 errno=0
+[   2396] usb f_acm/instances=1 rc=0 errno=0
+[   2402] usb functions=acm rc=0 errno=0
+[   2402] usb bDeviceClass=02 rc=0 errno=0
+[   2423] usb enable=1 rc=0 errno=0
+[   2423] stage 8 reached
+[   3423] wait=0 tty=0 state=CONFIGURED
+[   3424] stage 9 reached
+===
+up=8568s wall=2026-11-07 18:42:29 boot slot=/data/local/tmp/hm-direct/audio_a core=192.168.1.20:8932
+up=10s wall=2026-11-07 18:45:37 boot slot=/data/local/tmp/hm-direct/audio_a core=192.168.1.20:8932
+up=5s wall=2026-11-07 18:47:34 boot slot=/data/local/tmp/hm-direct/audio_a core=192.168.1.20:8932
+up=76s wall=2026-11-07 18:50:02 boot slot=/data/local/tmp/hm-direct/audio_a core=192.168.1.20:8932
+up=5s wall=2010-01-01 00:00:20 boot slot=/data/local/tmp/hm-direct/audio_a core=192.168.1.20:8932
+up=1077s wall=2026-11-08 00:38:19 boot slot=/data/local/tmp/hm-direct/audio_a core=192.168.1.20:8932
+up=5s wall=2026-11-08 00:41:31 boot slot=/data/local/tmp/hm-direct/audio_a core=192.168.1.20:8932
+up=5s wall=2026-11-08 00:42:48 boot slot=/data/local/tmp/hm-direct/audio_a core=192.168.1.20:8932
+up=5s wall=2026-11-08 00:43:48 boot slot=/data/local/tmp/hm-direct/audio_a core=192.168.1.20:8932
+up=5s wall=2026-11-08 00:57:03 boot slot=/data/local/tmp/hm-direct/audio_a core=192.168.1.20:8932
+up=3567s wall=2026-11-08 01:56:25 boot slot=/data/local/tmp/hm-direct/audio_a core=192.168.1.20:8932
+up=3591s wall=2026-11-08 01:56:49 boot slot=/data/local/tmp/hm-direct/audio_a core=192.168.1.20:8932
+up=5s wall=2010-01-01 00:00:20 boot slot=/data/local/tmp/hm-direct/audio_a core=192.168.1.20:8932
+up=5s wall=2010-01-01 00:01:47 boot slot=/data/local/tmp/hm-direct/audio_a core=192.168.1.20:8932
+up=218s wall=2026-11-08 02:12:53 os=fireos boot slot=/data/local/tmp/hm-direct/audio_a core=192.168.1.20:8932
+up=35s wall=2026-11-08 02:17:47 os=emos boot slot=/data/local/tmp/hm-direct/audio_a core=192.168.1.20:8932
+root@em-G090L91072732EXG:/ #

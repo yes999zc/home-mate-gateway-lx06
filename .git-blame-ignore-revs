@@ -1,0 +1,19 @@
+# Revisions whose lines `git blame` should skip.
+#
+# 7ce3cf7 is the one-off `style: cargo fmt --all` commit: it reformatted the
+# whole workspace for the first time, so it touches nearly every line of every
+# file without changing behaviour. Without this file, every line it re-wrapped
+# would be blamed on that commit instead of on the person who wrote the code,
+# and line numbers would no longer match older history.
+#
+# Enable it once per clone (local config, not committed):
+#   git config blame.ignoreRevsFile .git-blame-ignore-revs
+#
+# Or per invocation: git blame --ignore-revs-file .git-blame-ignore-revs <file>
+#
+# Rules for this file: append-only, one full 40-character SHA per line, and
+# only formatting/reordering commits — never anything that changed behaviour.
+# Blank lines and lines starting with `#` are ignored by git.
+
+# style: cargo fmt --all
+7ce3cf7e6ef9048c8b25f15d29fda4340eae369e

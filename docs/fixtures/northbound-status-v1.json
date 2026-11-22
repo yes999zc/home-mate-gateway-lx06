@@ -1,0 +1,33 @@
+{
+  "type": "device_status",
+  "device": "fixture-dot",
+  "online": true,
+  "reason": "registered",
+  "northbound": {
+    "schema": 1,
+    "boot_id": "fixture_boot_1",
+    "link_generation": 3,
+    "sampled_uptime_ms": 1500,
+    "critical_current_count": 3,
+    "critical_high_water_count": 9,
+    "critical_current_bytes": 2048,
+    "critical_high_water_bytes": 8192,
+    "health_coalesced": 42,
+    "presence_coalesced": 17,
+    "critical_full": 1,
+    "invalid_frames": 2,
+    "audio_dropped": 13,
+    "audio_current_count": 4,
+    "audio_high_water_count": 25,
+    "writer_timeouts": 1,
+    "writer_errors": 0,
+    "transport_disconnects": 2,
+    "oldest_pending_ms": 100,
+    "oldest_pending_high_water_ms": 900,
+    "successful_write_bytes": 65536,
+    "last_fault": {
+      "code": "critical_count_full",
+      "uptime_ms": 1200
+    }
+  }
+}

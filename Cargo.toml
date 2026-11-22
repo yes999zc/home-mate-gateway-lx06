@@ -1,0 +1,13 @@
+[workspace]
+resolver = "2"
+members = ["crates/gateway"]
+
+[profile.release]
+lto = "fat"
+codegen-units = 1
+opt-level = "s"
+
+[workspace.package]
+edition = "2021"
+version = "0.0.53"
+license-file = "NOT-LICENSED"
