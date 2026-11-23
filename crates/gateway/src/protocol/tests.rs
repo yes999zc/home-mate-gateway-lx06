@@ -98,6 +98,10 @@ fn gateway_frames_round_trip() {
             lag_ms: Some(90),
             bundle_id: Some("b999db10".into()),
             kws_generation: Some(1),
+            kws_tier: Some("real".into()),
+            wake_dur_ms: Some(760),
+            max_gap_ms: Some(160),
+            l2_passed: Some(true),
         },
         GatewayFrame::KwsReport {
             device: "dot2-d".into(),
@@ -492,4 +496,52 @@ fn audio_chunk_vad_fields_are_optional_and_round_trip() {
     assert!(wire.contains(r#""vad_prob":0.87"#));
     let rt = decode_gateway(&wire).expect("vad audio_chunk decodes");
     assert_eq!(rt, with_vad);
+}
+
+#[test]
+fn keyword_tier_fields_are_optional_and_round_trip() {
+    let legacy = r#"{"type":"keyword","device":"lx06","ts":1763560000123,"seq":7,"keyword":"你好小智","self_heard":false}"#;
+    let decoded = decode_gateway(legacy).expect("legacy keyword decodes");
+    assert!(matches!(
+        decoded,
+        GatewayFrame::Keyword {
+            kws_tier: None,
+            wake_dur_ms: None,
+            max_gap_ms: None,
+            l2_passed: None,
+            ..
+        }
+    ));
+    let wire_legacy = encode_gateway(&decoded).unwrap();
+    assert!(
+        !wire_legacy.contains("kws_tier")
+            && !wire_legacy.contains("wake_dur_ms")
+            && !wire_legacy.contains("max_gap_ms")
+            && !wire_legacy.contains("l2_passed"),
+        "None KWS tier fields must be omitted on the wire: {wire_legacy}"
+    );
+
+    let tiered = GatewayFrame::Keyword {
+        device: "dot2-d".into(),
+        ts: 1763560000456,
+        seq: 8,
+        keyword: "你好小智".into(),
+        fed_ms: Some(3200),
+        self_heard: false,
+        rms_dbfs: Some(-22.5),
+        lag_ms: Some(40),
+        bundle_id: Some("bundle-1".into()),
+        kws_generation: Some(2),
+        kws_tier: Some("real".into()),
+        wake_dur_ms: Some(720),
+        max_gap_ms: Some(160),
+        l2_passed: Some(true),
+    };
+    let wire = encode_gateway(&tiered).unwrap();
+    assert!(wire.contains(r#""kws_tier":"real""#));
+    assert!(wire.contains(r#""wake_dur_ms":720"#));
+    assert!(wire.contains(r#""max_gap_ms":160"#));
+    assert!(wire.contains(r#""l2_passed":true"#));
+    let rt = decode_gateway(&wire).expect("tiered keyword decodes");
+    assert_eq!(rt, tiered);
 }

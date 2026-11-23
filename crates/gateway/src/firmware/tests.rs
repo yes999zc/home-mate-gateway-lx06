@@ -779,6 +779,7 @@ fn mic_gain_metadata_is_preserved_but_keyword_wire_rms_stays_raw() {
         false,
         raw,
         Some(90),
+        &kws::KeywordMeta::default(),
     );
     match frame {
         GatewayFrame::Keyword { rms_dbfs, .. } => {

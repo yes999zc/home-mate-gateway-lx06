@@ -33,6 +33,9 @@ set -- \
   --joiner model/joiner-epoch-13-avg-2-chunk-16-left-64.int8.onnx \
   --keywords-file kw.txt \
   --threshold "${KWS_THRESHOLD:-0.25}" --score "${KWS_SCORE:-3.0}" --trailing-blanks 0 \
+  --l2-threshold "${KWS_L2_THRESHOLD:-0.0}" --l2-score "${KWS_L2_SCORE:-2.20}" \
+  --min-wake-ms "${KWS_MIN_WAKE_MS:-400}" --max-wake-ms "${KWS_MAX_WAKE_MS:-1400}" \
+  --max-token-gap-ms "${KWS_MAX_TOKEN_GAP_MS:-380}" --l2-min-tokens "${KWS_L2_MIN_TOKENS:-7}" \
   --cpu "${KWS_CPU:-3}" --name "$name"
 # Dot2 runs Silero VAD inside hm-core (in-process tract-onnx). Only attach sidecar
 # Silero VAD when KWS_VAD_MODEL is explicitly set (and != "off") to an existing file.

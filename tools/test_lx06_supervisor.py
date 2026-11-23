@@ -229,6 +229,54 @@ test ! -e "$FIXTURE/pns-live"
         self.assertFalse((self.root / "hm/hm-core").exists())
         self.assertFalse((self.root / "starts").exists())
 
+    def test_start_native_services_skips_live_ledserver_and_dismisses_boot_blue_ring(self):
+        body, launch, tail = SUPERVISOR.read_text().rpartition("\nrun_supervisor &")
+        assert launch and not tail.strip()
+        init_d = self.root / "init.d"
+        init_d.mkdir()
+        for svc in ("led", "touchpad", "mico_aivs_lab"):
+            script = init_d / svc
+            script.write_text(f'#!/bin/sh\necho "{svc} $*" >> "$FIXTURE/native.log"\n')
+            script.chmod(0o755)
+        shut_led = self.root / "shut_led"
+        shut_led.write_text('#!/bin/sh\necho "shut_led $*" >> "$FIXTURE/native.log"\n')
+        shut_led.chmod(0o755)
+
+        script = body + """
+PATH="$HOST_BIN_PATH"
+INIT_D_DIR="$FIXTURE/init.d"
+SHUT_LED_BIN="$FIXTURE/shut_led"
+WD_LOG="$FIXTURE/wd"
+pidof() { [ "$1" = ledserver ] && [ -f "$FIXTURE/led-live" ]; }
+
+# 1) When ledserver is already running (redeploy/mode-switch), do NOT re-run
+#    `/etc/init.d/led start` (which fires `show_led 4`), and dismiss stale L=4.
+touch "$FIXTURE/led-live"
+start_native_services
+
+# 2) When ledserver is stopped, start it and immediately dismiss boot L=4.
+rm -f "$FIXTURE/led-live"
+start_native_services
+"""
+        r = subprocess.run(
+            ["sh", "-eu"], input=script, text=True,
+            env={**os.environ, "FIXTURE": str(self.root), "HOST_BIN_PATH": os.environ["PATH"]},
+            capture_output=True, timeout=15,
+        )
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertEqual(
+            (self.root / "native.log").read_text().splitlines(),
+            [
+                "shut_led 4",
+                "touchpad start",
+                "mico_aivs_lab start",
+                "led start",
+                "shut_led 4",
+                "touchpad start",
+                "mico_aivs_lab start",
+            ],
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

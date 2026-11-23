@@ -404,6 +404,17 @@ pub enum GatewayFrame {
         bundle_id: Option<String>,
         #[serde(default, skip_serializing_if = "Option::is_none")]
         kws_generation: Option<u64>,
+        /// XiaoAi-style Tier 1 acoustic verification tier (`"real"` | `"suspect"`)
+        /// and frame-duration geometry from `hm-kws` (#69). Strictly optional so
+        /// older cores and older gateways remain wire-compatible.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        kws_tier: Option<String>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        wake_dur_ms: Option<u64>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        max_gap_ms: Option<u64>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        l2_passed: Option<bool>,
     },
     /// v0.2.5 (D/T5): the device heard GENUINE near-end speech while a
     /// voice-channel playback was live (onset + echo cross-correlation

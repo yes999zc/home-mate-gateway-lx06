@@ -17,13 +17,27 @@ NATIVE_LOG_DIR=/tmp/mico_aivs_lab
 CORE_LOG=/tmp/hm-core.log
 GW_LOG=/tmp/hm-gateway.log
 WD_LOG=/tmp/hm-watchdog.log
+INIT_D_DIR=/etc/init.d
+SHUT_LED_BIN=/bin/shut_led
 
 # Only the dual-wake gateway coordinates pns while it is running. A pinned
 # native session has all of its original services, including the wake engine.
+# Stock /etc/init.d/led's service_started() always triggers `/bin/show_led 4`
+# (the boot blue ring) on every `start` call. Skip restarting ledserver when
+# it is already live and dismiss L=4 (boot blue ring only, preserving L=7 mute).
 start_native_services() {
     for svc in led touchpad sound_effect mediaplayer quickplayer mico_aivs_lab mibrain_service messagingagent "$@"; do
-        if [ -x "/etc/init.d/$svc" ]; then
-            "/etc/init.d/$svc" start >> "$WD_LOG" 2>&1 || true
+        if [ "$svc" = led ]; then
+            if ! pidof ledserver >/dev/null 2>&1 && [ -x "$INIT_D_DIR/$svc" ]; then
+                "$INIT_D_DIR/$svc" start >> "$WD_LOG" 2>&1 || true
+            fi
+            if [ -x "$SHUT_LED_BIN" ]; then
+                "$SHUT_LED_BIN" 4 >> "$WD_LOG" 2>&1 || true
+            fi
+            continue
+        fi
+        if [ -x "$INIT_D_DIR/$svc" ]; then
+            "$INIT_D_DIR/$svc" start >> "$WD_LOG" 2>&1 || true
         fi
     done
 }

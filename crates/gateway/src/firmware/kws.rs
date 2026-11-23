@@ -353,6 +353,15 @@ impl KwsFeed {
     }
 }
 
+/// Optional XiaoAi-style L1+L2 acoustic telemetry emitted by `hm-kws` (#69).
+#[derive(Debug, Clone, Default, PartialEq)]
+pub struct KeywordMeta {
+    pub tier: Option<String>,
+    pub wake_dur_ms: Option<u64>,
+    pub max_gap_ms: Option<u64>,
+    pub l2_passed: Option<bool>,
+}
+
 /// One parsed stdout event from the driver (JSON lines, see kws/driver.c).
 #[derive(Debug, Clone, PartialEq)]
 pub enum DriverEvent {
@@ -366,6 +375,7 @@ pub enum DriverEvent {
         keyword: String,
         fed_ms: u64,
         lag_ms: Option<u64>,
+        meta: KeywordMeta,
     },
     /// Stage 2 remote neural VAD event from `hm-kws` (`--vad-model`).
     Vad {
@@ -407,6 +417,12 @@ pub fn parse_event_line(line: &str) -> DriverEvent {
             // arrived (only where in the stream it was). None when a driver
             // build predates the field — never a fabricated 0.
             lag_ms: v["lag_ms"].as_u64(),
+            meta: KeywordMeta {
+                tier: v["tier"].as_str().map(str::to_string),
+                wake_dur_ms: v["wake_dur_ms"].as_u64(),
+                max_gap_ms: v["max_gap_ms"].as_u64(),
+                l2_passed: v["l2_passed"].as_bool(),
+            },
         },
         "vad" => match v["speech"].as_bool() {
             Some(speech) => DriverEvent::Vad {
@@ -872,6 +888,7 @@ fn read_events(
                 keyword,
                 fed_ms,
                 lag_ms,
+                meta,
             } => {
                 // R1g: the guard's judgement rides WITH the fact instead of
                 // eating it. Suppressing here made the wake word unusable
@@ -921,11 +938,12 @@ fn read_events(
                     }
                 }
                 let ts = north_keyword(
-                    device, &keyword, fed_ms, hit_ms, status, suspected, rms, lag_ms,
+                    device, &keyword, fed_ms, hit_ms, status, suspected, rms, lag_ms, &meta,
                 );
                 fwlog!(
-                    "[kws] HIT {} rms={} lag={}",
+                    "[kws] HIT {} tier={} rms={} lag={}",
                     keyword,
+                    meta.tier.as_deref().unwrap_or("legacy"),
                     rms.map(|d| format!("{d:.1}dBFS"))
                         .unwrap_or_else(|| "n/a".into()),
                     lag_ms
@@ -970,6 +988,7 @@ pub fn north_keyword(
     self_heard: bool,
     rms_dbfs: Option<f32>,
     lag_ms: Option<u64>,
+    meta: &KeywordMeta,
 ) -> GatewayFrame {
     let (bundle_id, bundle_generation) = {
         let mut st = status.lock().unwrap();
@@ -1002,6 +1021,10 @@ pub fn north_keyword(
         lag_ms,
         bundle_id: (!bundle_id.is_empty()).then_some(bundle_id),
         kws_generation: (bundle_generation > 0).then_some(bundle_generation),
+        kws_tier: meta.tier.clone(),
+        wake_dur_ms: meta.wake_dur_ms,
+        max_gap_ms: meta.max_gap_ms,
+        l2_passed: meta.l2_passed,
     }
 }
 
@@ -1098,7 +1121,24 @@ mod tests {
             DriverEvent::Keyword {
                 keyword: "你好高达".into(),
                 fed_ms: 2720,
-                lag_ms: None
+                lag_ms: None,
+                meta: KeywordMeta::default(),
+            }
+        );
+        assert_eq!(
+            parse_event_line(
+                r#"{"event":"keyword","keyword":"你好小智","fed_ms":3200,"lag_ms":40,"wake_dur_ms":720,"max_gap_ms":160,"tier":"real","l2_passed":true,"l2_ms":18}"#
+            ),
+            DriverEvent::Keyword {
+                keyword: "你好小智".into(),
+                fed_ms: 3200,
+                lag_ms: Some(40),
+                meta: KeywordMeta {
+                    tier: Some("real".into()),
+                    wake_dur_ms: Some(720),
+                    max_gap_ms: Some(160),
+                    l2_passed: Some(true),
+                },
             }
         );
     }
@@ -1214,6 +1254,12 @@ mod tests {
     #[test]
     fn keyword_frame_carries_the_fact_and_counts() {
         let status: SharedStatus = Arc::new(Mutex::new(KwsStatus::default()));
+        let meta = KeywordMeta {
+            tier: Some("suspect".into()),
+            wake_dur_ms: Some(180),
+            max_gap_ms: Some(420),
+            l2_passed: Some(false),
+        };
         let frame = north_keyword(
             "dot2-d",
             "你好高达",
@@ -1223,6 +1269,7 @@ mod tests {
             false,
             Some(-31.5),
             Some(90),
+            &meta,
         );
         match frame {
             GatewayFrame::Keyword {
@@ -1230,12 +1277,20 @@ mod tests {
                 keyword,
                 fed_ms,
                 self_heard,
+                kws_tier,
+                wake_dur_ms,
+                max_gap_ms,
+                l2_passed,
                 ..
             } => {
                 assert_eq!(device, "dot2-d");
                 assert_eq!(keyword, "你好高达");
                 assert_eq!(fed_ms, Some(2720));
                 assert!(!self_heard);
+                assert_eq!(kws_tier.as_deref(), Some("suspect"));
+                assert_eq!(wake_dur_ms, Some(180));
+                assert_eq!(max_gap_ms, Some(420));
+                assert_eq!(l2_passed, Some(false));
             }
             other => panic!("wrong frame: {other:?}"),
         }
@@ -1260,6 +1315,7 @@ mod tests {
             true,
             None,
             None,
+            &KeywordMeta::default(),
         );
         match frame {
             GatewayFrame::Keyword { self_heard, .. } => assert!(self_heard),
