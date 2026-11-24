@@ -109,7 +109,7 @@ unpack_bundle_if_needed() {
         case "$main_digest" in *[!0-9a-f]*) return 1 ;; esac
         [ "${#main_digest}" -eq 64 ] || return 1
     fi
-    if [ -f "$HM_RUN_DIR/.lx06-idle-wake-v1" ] && [ -x "$HM_RUN_DIR/hm-core" ] &&
+    if [ -f "$HM_RUN_DIR/.lx06-idle-wake-v1" ] &&
         [ -x "$HM_RUN_DIR/hm-gateway" ] &&
         [ "$(cat "$HM_RUN_DIR/.main-sha256" 2>/dev/null)" = "$main_digest" ]; then
         return 0
@@ -136,6 +136,9 @@ unpack_bundle_if_needed() {
     # The live directory is a disposable tmpfs cache, never persistent state.
     rm -rf "$HM_RUN_DIR"
     mv "$stage" "$HM_RUN_DIR" || return 1
+    # THIN MODE: brain runs on the LAN core host; drop hm-core + web to save RAM.
+    rm -f "$HM_RUN_DIR/hm-core"
+    rm -rf "$HM_RUN_DIR/web"
     ln -sf "$HM_RUN_DIR/silero_vad.onnx" "$HM_STATE_DIR/models/silero_vad.onnx"
 }
 
@@ -248,26 +251,18 @@ supervise_tick() {
         restore_native_wake || return 1
     fi
     unpack_bundle_if_needed || return 1
-    if ! pidof hm-core >/dev/null 2>&1; then
-        HM_DATA_DIR="$HM_STATE_DIR" HM_BIND="0.0.0.0:8930" HM_GATEWAY_BIND="127.0.0.1:8932" \
-            HM_WEB_DIR="$HM_RUN_DIR/web" HM_SILERO_VAD="$HM_RUN_DIR/silero_vad.onnx" \
-            HM_LOOP_DIR=/tmp/hm-loop "$HM_RUN_DIR/hm-core" >> "$CORE_LOG" 2>&1 &
-    fi
-
+    # THIN MODE (128MB RAM batch): no local hm-core, no local KWS sidecar.
+    # Wake spotting / ASR / arbitration all run on the LAN core, reached via
+    # 127.0.0.1:8932 (e.g. an SSH reverse tunnel from the core host).
     if ! runtime_pid hm-gateway firmware >/dev/null; then
-        if ! fetch_kws_if_needed; then
-            return 1
-        fi
         vol_cap=1.0
         [ ! -f "$HM_FLASH_DIR/silent" ] || vol_cap=0.0
         HM_FW_AUDIO_CPU=1 HM_FW_PLAY_CPU=0 HM_LOOP_DIR=/tmp/hm-loop \
             KWS_VAD_MODEL="$HM_RUN_DIR/silero_vad.onnx" HM_LX06_DUAL_WAKE=1 \
             "$HM_RUN_DIR/hm-gateway" firmware --core 127.0.0.1:8932 --device-id lx06 \
             --state-dir "$HM_STATE_DIR" --aec --barge-in off --loudness-bass 0.0 \
-            --loopback-probe --kws --kws-dir "$KWS_DIR" --kws-cpu 3 \
+            --loopback-probe \
             --volume-cap "$vol_cap" >> "$GW_LOG" 2>&1 &
-    else
-        sync_kws_config
     fi
 }
 
