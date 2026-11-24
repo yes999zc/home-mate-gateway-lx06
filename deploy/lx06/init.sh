@@ -102,6 +102,19 @@ stop_runtime() {
     fi
 }
 
+# Auto-detect 128 MB RAM LX06 batch (MemTotal ~118 MB, /tmp tmpfs ~59 MB) or
+# explicit thin-mode toggle (/data/hm/thin-mode or HM_THIN_MODE=1).
+# 256 MB units keep the full on-device hm-core + local KWS runtime untouched.
+is_thin_mode() {
+    [ "${HM_THIN_MODE:-0}" = 1 ] && return 0
+    [ -f "$HM_FLASH_DIR/thin-mode" ] && return 0
+    mem_kb=$(awk '/^MemTotal:/ {print $2; exit}' /proc/meminfo 2>/dev/null || echo 0)
+    case "$mem_kb" in
+        ''|*[!0-9]*) return 1 ;;
+    esac
+    [ "$mem_kb" -gt 0 ] && [ "$mem_kb" -lt 180000 ]
+}
+
 unpack_bundle_if_needed() {
     main_digest=""
     if [ -f "$HM_FLASH_DIR/hm-bundle.sha256" ]; then
@@ -111,6 +124,7 @@ unpack_bundle_if_needed() {
     fi
     if [ -f "$HM_RUN_DIR/.lx06-idle-wake-v1" ] &&
         [ -x "$HM_RUN_DIR/hm-gateway" ] &&
+        ( is_thin_mode || [ -x "$HM_RUN_DIR/hm-core" ] ) &&
         [ "$(cat "$HM_RUN_DIR/.main-sha256" 2>/dev/null)" = "$main_digest" ]; then
         return 0
     fi
@@ -126,8 +140,10 @@ unpack_bundle_if_needed() {
     # there is no room for another copy of the compressed archive in /data.
     ( "$HM_FLASH_DIR/unxz" < "$HM_FLASH_DIR/hm-bundle.tar.xz" && touch "$stage/.unpacked" ) |
         tar -xf - -C "$stage" &&
-        [ -f "$stage/.unpacked" ] && [ -s "$stage/hm-core" ] && [ -s "$stage/hm-gateway" ] &&
-        chmod +x "$stage/hm-core" "$stage/hm-gateway" || return 1
+        [ -f "$stage/.unpacked" ] && [ -s "$stage/hm-gateway" ] &&
+        ( is_thin_mode || [ -s "$stage/hm-core" ] ) &&
+        chmod +x "$stage/hm-gateway" || return 1
+    [ ! -s "$stage/hm-core" ] || chmod +x "$stage/hm-core" || return 1
     # Old LX06 binaries take exclusive ownership of audio. Only activate a
     # freshly unpacked archive after its gateway confirms the shared contract.
     [ "$("$stage/hm-gateway" lx06-wake-contract 2>> "$WD_LOG")" = lx06-idle-wake-v1 ] &&
@@ -136,9 +152,12 @@ unpack_bundle_if_needed() {
     # The live directory is a disposable tmpfs cache, never persistent state.
     rm -rf "$HM_RUN_DIR"
     mv "$stage" "$HM_RUN_DIR" || return 1
-    # THIN MODE: brain runs on the LAN core host; drop hm-core + web to save RAM.
-    rm -f "$HM_RUN_DIR/hm-core"
-    rm -rf "$HM_RUN_DIR/web"
+    if is_thin_mode; then
+        # THIN MODE (128MB RAM batch): brain runs on a LAN Docker/host hm-core;
+        # drop hm-core + web from tmpfs to preserve RAM.
+        rm -f "$HM_RUN_DIR/hm-core"
+        rm -rf "$HM_RUN_DIR/web"
+    fi
     ln -sf "$HM_RUN_DIR/silero_vad.onnx" "$HM_STATE_DIR/models/silero_vad.onnx"
 }
 
@@ -251,18 +270,43 @@ supervise_tick() {
         restore_native_wake || return 1
     fi
     unpack_bundle_if_needed || return 1
-    # THIN MODE (128MB RAM batch): no local hm-core, no local KWS sidecar.
-    # Wake spotting / ASR / arbitration all run on the LAN core, reached via
-    # 127.0.0.1:8932 (e.g. an SSH reverse tunnel from the core host).
+    if is_thin_mode; then
+        # THIN MODE (128MB RAM batch): no local hm-core, no local KWS sidecar.
+        # Requires a full hm-core running on a LAN NAS/server (e.g. Docker)
+        # forwarded to 127.0.0.1:8932 via SSH reverse tunnel.
+        if ! runtime_pid hm-gateway firmware >/dev/null; then
+            vol_cap=1.0
+            [ ! -f "$HM_FLASH_DIR/silent" ] || vol_cap=0.0
+            HM_FW_AUDIO_CPU=1 HM_FW_PLAY_CPU=0 HM_LOOP_DIR=/tmp/hm-loop \
+                KWS_VAD_MODEL="$HM_RUN_DIR/silero_vad.onnx" HM_LX06_DUAL_WAKE=1 \
+                "$HM_RUN_DIR/hm-gateway" firmware --core 127.0.0.1:8932 --device-id lx06 \
+                --state-dir "$HM_STATE_DIR" --aec --barge-in off --loudness-bass 0.0 \
+                --loopback-probe \
+                --volume-cap "$vol_cap" >> "$GW_LOG" 2>&1 &
+        fi
+        return 0
+    fi
+
+    if ! pidof hm-core >/dev/null 2>&1; then
+        HM_DATA_DIR="$HM_STATE_DIR" HM_BIND="0.0.0.0:8930" HM_GATEWAY_BIND="127.0.0.1:8932" \
+            HM_WEB_DIR="$HM_RUN_DIR/web" HM_SILERO_VAD="$HM_RUN_DIR/silero_vad.onnx" \
+            HM_LOOP_DIR=/tmp/hm-loop "$HM_RUN_DIR/hm-core" >> "$CORE_LOG" 2>&1 &
+    fi
+
     if ! runtime_pid hm-gateway firmware >/dev/null; then
+        if ! fetch_kws_if_needed; then
+            return 1
+        fi
         vol_cap=1.0
         [ ! -f "$HM_FLASH_DIR/silent" ] || vol_cap=0.0
         HM_FW_AUDIO_CPU=1 HM_FW_PLAY_CPU=0 HM_LOOP_DIR=/tmp/hm-loop \
             KWS_VAD_MODEL="$HM_RUN_DIR/silero_vad.onnx" HM_LX06_DUAL_WAKE=1 \
             "$HM_RUN_DIR/hm-gateway" firmware --core 127.0.0.1:8932 --device-id lx06 \
             --state-dir "$HM_STATE_DIR" --aec --barge-in off --loudness-bass 0.0 \
-            --loopback-probe \
+            --loopback-probe --kws --kws-dir "$KWS_DIR" --kws-cpu 3 \
             --volume-cap "$vol_cap" >> "$GW_LOG" 2>&1 &
+    else
+        sync_kws_config
     fi
 }
 
