@@ -1,3 +1,15 @@
+> [!IMPORTANT]
+> **本仓库已合并迁移并设为只读归档。**
+>
+> 原 Amazon Echo Dot 2（`board-dot2`）与小米小爱音箱 Pro LX06（`board-lx06`，自动适配 256 MB 本机双唤醒与 128 MB 瘦网关）已统一合并至全新的 Linux 硬件网关仓库：
+>
+> - **新统一 Linux 硬件网关（`v0.0.53`）**：**[yes999zc/home-mate-gateway-linux](https://github.com/yes999zc/home-mate-gateway-linux)**
+> - **Core 核心大脑（`v0.3.0`）**：**[yes999zc/home-mate](https://github.com/yes999zc/home-mate)**
+> - **Android 通用自适应端（`v2.3.15`）**：**[yes999zc/home-mate-gateway-android](https://github.com/yes999zc/home-mate-gateway-android)**
+> - **官网与四轨上手向导**：**[https://mymate.homes](https://mymate.homes)**
+>
+> 后续全部更新、正式发布与 AI 一键部署提示词均已迁移至 `yes999zc/home-mate-gateway-linux`。
+
 <p align="center">
   <img src="docs/assets/hero-banner-zh.png" alt="Home Mate · 小瑞 小爱音箱 Pro (LX06) 专属硬件网关" width="100%" />
 </p>

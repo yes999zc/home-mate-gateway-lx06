@@ -1,3 +1,15 @@
+> [!IMPORTANT]
+> **This repository has been consolidated and archived.**
+>
+> Both Amazon Echo Dot 2 (`board-dot2`) and Xiaomi AI Speaker Pro LX06 (`board-lx06`, adaptive 256 MB on-speaker & 128 MB thin gateway) now live in a single unified repository:
+>
+> - **New Unified Linux Gateway (`v0.0.53`)**: **[yes999zc/home-mate-gateway-linux](https://github.com/yes999zc/home-mate-gateway-linux)**
+> - **Core Edge Brain (`v0.3.0`)**: **[yes999zc/home-mate](https://github.com/yes999zc/home-mate)**
+> - **Android Universal APK (`v2.3.15`)**: **[yes999zc/home-mate-gateway-android](https://github.com/yes999zc/home-mate-gateway-android)**
+> - **Official Website & Quickstart**: **[https://mymate.homes](https://mymate.homes)**
+>
+> All future updates, releases, and AI deployment prompts are maintained in `yes999zc/home-mate-gateway-linux`.
+
 <p align="center">
   <img src="docs/assets/hero-banner-en.png" alt="Home Mate · XiaoRui Gateway for Xiaomi AI Speaker Pro (LX06)" width="100%" />
 </p>
